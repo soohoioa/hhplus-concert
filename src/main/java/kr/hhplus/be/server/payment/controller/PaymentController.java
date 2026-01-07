@@ -1,5 +1,8 @@
 package kr.hhplus.be.server.payment.controller;
 
+import kr.hhplus.be.server.payment.application.PayUseCase;
+import kr.hhplus.be.server.payment.application.dto.PayCommand;
+import kr.hhplus.be.server.payment.application.dto.PayResult;
 import kr.hhplus.be.server.payment.dto.PaymentRequest;
 import kr.hhplus.be.server.payment.dto.PaymentResponse;
 import kr.hhplus.be.server.payment.service.PaymentService;
@@ -14,11 +17,23 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/payments")
 public class PaymentController {
 
-    private final PaymentService paymentService;
+    private final PayUseCase payUseCase;
 
     @PostMapping
-    public PaymentResponse pay(@RequestBody PaymentRequest req) {
-        return paymentService.pay(req);
+    public PaymentResponse pay(@RequestBody PaymentRequest paymentRequest) {
+        PayResult result = payUseCase.pay(
+                new PayCommand(paymentRequest.getUserId(), paymentRequest.getScheduleId(),
+                        paymentRequest.getSeatNo(), paymentRequest.getAmount())
+        );
+
+        return new PaymentResponse(
+                result.getPaymentId(),
+                result.getUserId(),
+                result.getScheduleId(),
+                result.getSeatNo(),
+                result.getAmount(),
+                result.getPaidAt()
+        );
     }
 
 }
