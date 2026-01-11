@@ -1,12 +1,11 @@
-package kr.hhplus.be.server.concert.dto;
+package kr.hhplus.be.server.concert.controller.dto;
 
 import lombok.Value;
 
 import java.time.LocalDateTime;
 
 @Value
-public class ScheduleCreateResponse {
+public class ScheduleResponse {
     Long scheduleId;
-    Long concertId;
     LocalDateTime startAt;
 }

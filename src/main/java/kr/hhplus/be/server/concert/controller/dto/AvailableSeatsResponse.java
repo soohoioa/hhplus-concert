@@ -1,4 +1,4 @@
-package kr.hhplus.be.server.concert.dto;
+package kr.hhplus.be.server.concert.controller.dto;
 
 import lombok.Value;
 

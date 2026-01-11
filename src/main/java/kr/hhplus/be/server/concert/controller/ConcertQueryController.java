@@ -1,8 +1,12 @@
 package kr.hhplus.be.server.concert.controller;
 
-import kr.hhplus.be.server.concert.dto.AvailableSeatsResponse;
-import kr.hhplus.be.server.concert.dto.ScheduleResponse;
-import kr.hhplus.be.server.concert.service.ConcertQueryService;
+import kr.hhplus.be.server.concert.application.dto.GetAvailableSeatsQuery;
+import kr.hhplus.be.server.concert.application.dto.GetAvailableSeatsResult;
+import kr.hhplus.be.server.concert.application.dto.GetSchedulesQuery;
+import kr.hhplus.be.server.concert.application.dto.ScheduleItem;
+import kr.hhplus.be.server.concert.application.service.ConcertQueryUseCase;
+import kr.hhplus.be.server.concert.controller.dto.AvailableSeatsResponse;
+import kr.hhplus.be.server.concert.controller.dto.ScheduleResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -16,11 +20,14 @@ import java.util.List;
 @RequestMapping("/api/v1/concerts")
 public class ConcertQueryController {
 
-    private final ConcertQueryService concertQueryService;
+    private final ConcertQueryUseCase concertQueryUseCase;
 
     @GetMapping("/{concertId}/schedules")
     public List<ScheduleResponse> getSchedules(@PathVariable Long concertId) {
-        return concertQueryService.getSchedules(concertId);
+        List<ScheduleItem> items = concertQueryUseCase.getSchedules(new GetSchedulesQuery(concertId));
+        return items.stream()
+                .map(i -> new ScheduleResponse(i.getScheduleId(), i.getStartAt()))
+                .toList();
     }
 
     @GetMapping("/{concertId}/schedules/{scheduleId}/seats")
@@ -28,7 +35,10 @@ public class ConcertQueryController {
             @PathVariable Long concertId,
             @PathVariable Long scheduleId
     ) {
-        return concertQueryService.getAvailableSeats(concertId, scheduleId);
+        GetAvailableSeatsResult result = concertQueryUseCase.getAvailableSeats(
+                new GetAvailableSeatsQuery(concertId, scheduleId)
+        );
+        return new AvailableSeatsResponse(result.getScheduleId(), result.getAvailableSeatNos());
     }
 
 }
