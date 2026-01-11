@@ -1,12 +1,12 @@
-package kr.hhplus.be.server.reservation.service;
+package kr.hhplus.be.server.reservation.application.service;
 
 import kr.hhplus.be.server.common.error.AppException;
 import kr.hhplus.be.server.common.error.ErrorCode;
+import kr.hhplus.be.server.reservation.application.dto.HoldSeatCommand;
+import kr.hhplus.be.server.reservation.application.dto.HoldSeatResult;
+import kr.hhplus.be.server.reservation.port.out.LoadSeatForUpdatePort;
 import kr.hhplus.be.server.reservation.domain.ScheduleSeat;
 import kr.hhplus.be.server.reservation.domain.SeatStatus;
-import kr.hhplus.be.server.reservation.dto.SeatHoldRequest;
-import kr.hhplus.be.server.reservation.dto.SeatHoldResponse;
-import kr.hhplus.be.server.reservation.repository.ScheduleSeatRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,17 +17,22 @@ import java.time.LocalDateTime;
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class SeatHoldService {
-
+public class HoldSeatUseCaseImpl implements HoldSeatUseCase {
     private static final Duration HOLD_DURATION = Duration.ofMinutes(5);
 
-    private final ScheduleSeatRepository seatRepository;
+    private final LoadSeatForUpdatePort loadSeatForUpdatePort;
 
-    public SeatHoldResponse holdSeat(SeatHoldRequest sendRequest) {
-        validateSeatNo(sendRequest.getSeatNo());
+    @Override
+    public HoldSeatResult hold(HoldSeatCommand holdSeatCommand) {
+        validateSeatNo(holdSeatCommand.getSeatNo());
 
         LocalDateTime now = LocalDateTime.now();
-        ScheduleSeat seat = seatRepository.findByScheduleIdAndSeatNoForUpdate(sendRequest.getScheduleId(), sendRequest.getSeatNo())
+
+//        ScheduleSeat seat = loadSeatForUpdatePort
+//                .findByScheduleIdAndSeatNoForUpdate(holdSeatCommand.getScheduleId(), holdSeatCommand.getSeatNo())
+//                .orElseThrow(() -> new AppException(ErrorCode.SEAT_NOT_FOUND));
+        ScheduleSeat seat = loadSeatForUpdatePort
+                .loadForUpdate(holdSeatCommand.getScheduleId(), holdSeatCommand.getSeatNo())
                 .orElseThrow(() -> new AppException(ErrorCode.SEAT_NOT_FOUND));
 
         // 만료된 HELD는 즉시 해제(AVAILABLE 취급)
@@ -43,9 +48,9 @@ public class SeatHoldService {
         }
 
         LocalDateTime expiresAt = now.plus(HOLD_DURATION);
-        seat.hold(sendRequest.getUserId(), expiresAt);
+        seat.hold(holdSeatCommand.getUserId(), expiresAt);
 
-        return new SeatHoldResponse(sendRequest.getScheduleId(), sendRequest.getSeatNo(), expiresAt);
+        return new HoldSeatResult(holdSeatCommand.getScheduleId(), holdSeatCommand.getSeatNo(), expiresAt);
     }
 
     private void validateSeatNo(Integer seatNo) {
@@ -53,5 +58,4 @@ public class SeatHoldService {
             throw new AppException(ErrorCode.SEAT_NO_OUT_OF_RANGE);
         }
     }
-
 }

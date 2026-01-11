@@ -1,4 +1,4 @@
-package kr.hhplus.be.server.reservation.dto;
+package kr.hhplus.be.server.reservation.controller.dto;
 
 import lombok.Value;
 
