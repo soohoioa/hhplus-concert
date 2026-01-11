@@ -1,4 +1,4 @@
-package kr.hhplus.be.server.payment.dto;
+package kr.hhplus.be.server.payment.controller.dto;
 
 import lombok.Value;
 

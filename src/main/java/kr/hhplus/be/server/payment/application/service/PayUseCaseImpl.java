@@ -1,14 +1,14 @@
-package kr.hhplus.be.server.payment.application;
+package kr.hhplus.be.server.payment.application.service;
 
 import kr.hhplus.be.server.common.error.AppException;
 import kr.hhplus.be.server.common.error.ErrorCode;
 import kr.hhplus.be.server.payment.application.dto.PayCommand;
 import kr.hhplus.be.server.payment.application.dto.PayResult;
-import kr.hhplus.be.server.payment.application.port.CreatePaymentPort;
-import kr.hhplus.be.server.payment.application.port.LoadUserPointPort;
+import kr.hhplus.be.server.payment.port.out.CreatePaymentPort;
 import kr.hhplus.be.server.payment.domain.Payment;
+import kr.hhplus.be.server.point.application.service.SpendPointUseCase;
 import kr.hhplus.be.server.point.domain.UserPoint;
-import kr.hhplus.be.server.reservation.application.port.LoadSeatForUpdatePort;
+import kr.hhplus.be.server.reservation.port.out.LoadSeatForUpdatePort;
 import kr.hhplus.be.server.reservation.domain.ScheduleSeat;
 import kr.hhplus.be.server.reservation.domain.SeatStatus;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +24,7 @@ import java.util.Objects;
 public class PayUseCaseImpl implements PayUseCase {
 
     private final LoadSeatForUpdatePort loadSeatForUpdatePort;
-    private final LoadUserPointPort loadUserPointPort;
+    private final SpendPointUseCase spendPointUseCase;
     private final CreatePaymentPort createPaymentPort;
 
     @Override
@@ -33,36 +33,33 @@ public class PayUseCaseImpl implements PayUseCase {
 
         LocalDateTime now = LocalDateTime.now();
 
-        // 1) 좌석 row 락 (결제 시점에도 최종 검증 필요)
         ScheduleSeat seat = loadSeatForUpdatePort
-                .findByScheduleIdAndSeatNoForUpdate(command.getScheduleId(), command.getSeatNo())
+                .loadForUpdate(command.getScheduleId(), command.getSeatNo())
                 .orElseThrow(() -> new AppException(ErrorCode.SEAT_NOT_FOUND));
 
-        // 2) 만료된 hold면 해제
-        if (seat.isHoldExpired(now)) {
-            seat.releaseHold();
+        // 상태/만료 검증 (결제는 "만료면 실패"가 일관됨)
+        if (seat.getStatus() == SeatStatus.RESERVED) {
+            throw new AppException(ErrorCode.SEAT_ALREADY_RESERVED);
         }
-
-        // 3) hold 유효성 체크
         if (seat.getStatus() != SeatStatus.HELD) {
             throw new AppException(ErrorCode.SEAT_NOT_HELD);
         }
         if (!Objects.equals(seat.getHoldUserId(), command.getUserId())) {
             throw new AppException(ErrorCode.SEAT_HELD_BY_OTHER);
         }
-        if (seat.getHoldExpiresAt() == null || seat.getHoldExpiresAt().isBefore(now)) {
+        LocalDateTime expiresAt = seat.getHoldExpiresAt();
+        if (expiresAt == null || !expiresAt.isAfter(now)) {
             throw new AppException(ErrorCode.HOLD_EXPIRED);
         }
 
-        // 4) 포인트 차감 (@Version 낙관 락)
-        UserPoint point = loadUserPointPort.findByUserId(command.getUserId())
-                .orElseThrow(() -> new AppException(ErrorCode.USER_POINT_NOT_FOUND));
-        point.spend(command.getAmount());
+//        UserPoint point = loadUserPointPort.findByUserId(command.getUserId())
+//                .orElseThrow(() -> new AppException(ErrorCode.USER_POINT_NOT_FOUND));
+//        point.spend(command.getAmount());
+//        saveUserPointPort.save(point);
+        spendPointUseCase.spend(command.getUserId(), command.getAmount());
 
-        // 5) 좌석 RESERVED 확정
         seat.reserve(command.getUserId(), now);
 
-        // 6) 결제내역 생성
         Payment payment = createPaymentPort.save(
                 Payment.of(command.getUserId(), command.getScheduleId(), command.getSeatNo(), command.getAmount(), now)
         );

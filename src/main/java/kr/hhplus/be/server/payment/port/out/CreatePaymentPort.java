@@ -1,4 +1,4 @@
-package kr.hhplus.be.server.payment.application.port;
+package kr.hhplus.be.server.payment.port.out;
 
 import kr.hhplus.be.server.payment.domain.Payment;
 

@@ -4,16 +4,17 @@ import kr.hhplus.be.server.common.error.AppException;
 import kr.hhplus.be.server.common.error.ErrorCode;
 import kr.hhplus.be.server.concert.domain.Concert;
 import kr.hhplus.be.server.concert.domain.ConcertSchedule;
-import kr.hhplus.be.server.concert.repository.ConcertRepository;
-import kr.hhplus.be.server.concert.repository.ConcertScheduleRepository;
-import kr.hhplus.be.server.payment.dto.PaymentRequest;
+import kr.hhplus.be.server.concert.infrastructure.persistence.jpa.ConcertJpaRepository;
+import kr.hhplus.be.server.concert.infrastructure.persistence.jpa.ConcertScheduleJpaRepository;
+import kr.hhplus.be.server.payment.application.dto.PayCommand;
+import kr.hhplus.be.server.payment.application.service.PayUseCase;
 import kr.hhplus.be.server.point.domain.UserPoint;
-import kr.hhplus.be.server.point.repository.UserPointRepository;
+import kr.hhplus.be.server.point.infrastructure.persistence.jpa.UserPointJpaRepository;
+import kr.hhplus.be.server.reservation.application.dto.HoldSeatCommand;
+import kr.hhplus.be.server.reservation.application.service.HoldSeatUseCase;
 import kr.hhplus.be.server.reservation.domain.ScheduleSeat;
 import kr.hhplus.be.server.reservation.domain.SeatStatus;
-import kr.hhplus.be.server.reservation.dto.SeatHoldRequest;
-import kr.hhplus.be.server.reservation.repository.ScheduleSeatRepository;
-import kr.hhplus.be.server.reservation.service.SeatHoldService;
+import kr.hhplus.be.server.reservation.infrastructure.persistence.jpa.ScheduleSeatRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -28,22 +29,25 @@ import static org.junit.jupiter.api.Assertions.*;
 @Transactional
 class PaymentServiceTest { // 결제 성공/실패(좌석 상태/포인트 부족/사용자 불일치 등)
 
-    @Autowired PaymentService paymentService;
-    @Autowired SeatHoldService seatHoldService;
+    @Autowired PayUseCase payUseCase;
+    @Autowired HoldSeatUseCase holdSeatUseCase;
 
-    @Autowired UserPointRepository userPointRepository;
+    @Autowired UserPointJpaRepository userPointJpaRepository;
     @Autowired ScheduleSeatRepository seatRepository;
-    @Autowired ConcertScheduleRepository scheduleRepository;
-    @Autowired ConcertRepository concertRepository;
+
+    @Autowired
+    ConcertScheduleJpaRepository scheduleJpaRepository;
+    @Autowired
+    ConcertJpaRepository concertJpaRepository;
 
     private ConcertSchedule createSchedule() {
-        Concert concert = concertRepository.save(Concert.create("콘서트"));
-        return scheduleRepository.save(ConcertSchedule.create(concert, LocalDateTime.now().plusDays(1)));
+        Concert concert = concertJpaRepository.save(Concert.create("콘서트"));
+        return scheduleJpaRepository.save(ConcertSchedule.create(concert, LocalDateTime.now().plusDays(1)));
     }
 
     private void initPoint(Long userId, long amount) {
-        userPointRepository.save(UserPoint.init(userId));
-        userPointRepository.findById(userId).get().charge(amount);
+        userPointJpaRepository.save(UserPoint.init(userId));
+        userPointJpaRepository.findById(userId).orElseThrow().charge(amount);
     }
 
     @Test
@@ -51,12 +55,12 @@ class PaymentServiceTest { // 결제 성공/실패(좌석 상태/포인트 부�
         ConcertSchedule schedule = createSchedule();
         seatRepository.save(ScheduleSeat.create(schedule, 1));
 
-        seatHoldService.holdSeat(new SeatHoldRequest(1L, schedule.getId(), 1));
+        holdSeatUseCase.hold(new HoldSeatCommand(1L, schedule.getId(), 1));
         initPoint(1L, 1000L);
 
-        paymentService.pay(new PaymentRequest(1L, schedule.getId(), 1, 500L));
+        payUseCase.pay(new PayCommand(1L, schedule.getId(), 1, 500L));
 
-        ScheduleSeat seat = seatRepository.findByScheduleIdAndSeatNoForUpdate(schedule.getId(), 1).get();
+        ScheduleSeat seat = seatRepository.findByScheduleIdAndSeatNo(schedule.getId(), 1).orElseThrow();
         assertThat(seat.getStatus()).isEqualTo(SeatStatus.RESERVED);
     }
 
@@ -65,11 +69,11 @@ class PaymentServiceTest { // 결제 성공/실패(좌석 상태/포인트 부�
         ConcertSchedule schedule = createSchedule();
         seatRepository.save(ScheduleSeat.create(schedule, 1));
 
-        seatHoldService.holdSeat(new SeatHoldRequest(1L, schedule.getId(), 1));
+        holdSeatUseCase.hold(new HoldSeatCommand(1L, schedule.getId(), 1));
         initPoint(1L, 100L);
 
         AppException ex = assertThrows(AppException.class,
-                () -> paymentService.pay(new PaymentRequest(1L, schedule.getId(), 1, 500L))
+                () -> payUseCase.pay(new PayCommand(1L, schedule.getId(), 1, 500L))
         );
 
         assertEquals(ErrorCode.INSUFFICIENT_BALANCE, ex.getErrorCode());
@@ -87,7 +91,7 @@ class PaymentServiceTest { // 결제 성공/실패(좌석 상태/포인트 부�
 
         // when
         AppException ex = assertThrows(AppException.class,
-                () -> paymentService.pay(new PaymentRequest(1L, schedule.getId(), 1, 500L))
+                () -> payUseCase.pay(new PayCommand(1L, schedule.getId(), 1, 500L))
         );
 
         // then
@@ -105,7 +109,7 @@ class PaymentServiceTest { // 결제 성공/실패(좌석 상태/포인트 부�
 
         // when
         AppException ex = assertThrows(AppException.class,
-                () -> paymentService.pay(new PaymentRequest(1L, schedule.getId(), 1, 500L))
+                () -> payUseCase.pay(new PayCommand(1L, schedule.getId(), 1, 500L))
         );
 
         // then
@@ -114,20 +118,19 @@ class PaymentServiceTest { // 결제 성공/실패(좌석 상태/포인트 부�
 
     @Test
     void 예약중인_사용자만_결제할_수_있다() {
-        // given
         ConcertSchedule schedule = createSchedule();
         seatRepository.save(ScheduleSeat.create(schedule, 1));
 
-        seatHoldService.holdSeat(new SeatHoldRequest(1L, schedule.getId(), 1));
+        holdSeatUseCase.hold(new HoldSeatCommand(1L, schedule.getId(), 1));
+
+        // userId=2가 결제 시도
         initPoint(2L, 1000L);
 
-        // when
         AppException ex = assertThrows(AppException.class,
-                () -> paymentService.pay(new PaymentRequest(2L, schedule.getId(), 1, 500L))
+                () -> payUseCase.pay(new PayCommand(2L, schedule.getId(), 1, 500L))
         );
 
-        // then
-        assertThat(ex.getErrorCode()).isIn(ErrorCode.SEAT_HELD_BY_OTHER);
+        assertEquals(ErrorCode.SEAT_HELD_BY_OTHER, ex.getErrorCode());
     }
 
 }
