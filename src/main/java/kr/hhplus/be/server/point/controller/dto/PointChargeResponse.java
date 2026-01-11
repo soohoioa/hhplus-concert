@@ -1,4 +1,4 @@
-package kr.hhplus.be.server.point.dto;
+package kr.hhplus.be.server.point.controller.dto;
 
 import lombok.Value;
 
