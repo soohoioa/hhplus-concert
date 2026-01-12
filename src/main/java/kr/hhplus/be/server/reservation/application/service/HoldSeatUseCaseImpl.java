@@ -4,9 +4,7 @@ import kr.hhplus.be.server.common.error.AppException;
 import kr.hhplus.be.server.common.error.ErrorCode;
 import kr.hhplus.be.server.reservation.application.dto.HoldSeatCommand;
 import kr.hhplus.be.server.reservation.application.dto.HoldSeatResult;
-import kr.hhplus.be.server.reservation.port.out.LoadSeatForUpdatePort;
-import kr.hhplus.be.server.reservation.domain.ScheduleSeat;
-import kr.hhplus.be.server.reservation.domain.SeatStatus;
+import kr.hhplus.be.server.reservation.port.out.ReservationSeatPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,39 +16,32 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 @Transactional
 public class HoldSeatUseCaseImpl implements HoldSeatUseCase {
-    private static final Duration HOLD_DURATION = Duration.ofMinutes(5);
 
-    private final LoadSeatForUpdatePort loadSeatForUpdatePort;
+    private static final Duration HOLD_TTL = Duration.ofMinutes(5);
+
+    private final ReservationSeatPort reservationSeatPort;
 
     @Override
-    public HoldSeatResult hold(HoldSeatCommand holdSeatCommand) {
-        validateSeatNo(holdSeatCommand.getSeatNo());
+    public HoldSeatResult hold(HoldSeatCommand command) {
+        validateSeatNo(command.getSeatNo());
 
         LocalDateTime now = LocalDateTime.now();
+        LocalDateTime expiresAt = now.plus(HOLD_TTL);
 
-//        ScheduleSeat seat = loadSeatForUpdatePort
-//                .findByScheduleIdAndSeatNoForUpdate(holdSeatCommand.getScheduleId(), holdSeatCommand.getSeatNo())
-//                .orElseThrow(() -> new AppException(ErrorCode.SEAT_NOT_FOUND));
-        ScheduleSeat seat = loadSeatForUpdatePort
-                .loadForUpdate(holdSeatCommand.getScheduleId(), holdSeatCommand.getSeatNo())
-                .orElseThrow(() -> new AppException(ErrorCode.SEAT_NOT_FOUND));
+        int updated = reservationSeatPort.tryHold(
+                command.getScheduleId(),
+                command.getSeatNo(),
+                command.getUserId(),
+                expiresAt,
+                now
+        );
 
-        // 만료된 HELD는 즉시 해제(AVAILABLE 취급)
-        if (seat.isHoldExpired(now)) {
-            seat.releaseHold();
-        }
-
-        if (seat.getStatus() == SeatStatus.RESERVED) {
-            throw new AppException(ErrorCode.SEAT_ALREADY_RESERVED);
-        }
-        if (seat.getStatus() == SeatStatus.HELD) {
+        if (updated == 0) {
+            // 실패 사유는 보통 이미 다른 사람이 HELD 거나 이미 RESERVED
             throw new AppException(ErrorCode.SEAT_HELD_BY_OTHER);
         }
 
-        LocalDateTime expiresAt = now.plus(HOLD_DURATION);
-        seat.hold(holdSeatCommand.getUserId(), expiresAt);
-
-        return new HoldSeatResult(holdSeatCommand.getScheduleId(), holdSeatCommand.getSeatNo(), expiresAt);
+        return new HoldSeatResult(command.getScheduleId(), command.getSeatNo(), expiresAt);
     }
 
     private void validateSeatNo(Integer seatNo) {
@@ -58,4 +49,5 @@ public class HoldSeatUseCaseImpl implements HoldSeatUseCase {
             throw new AppException(ErrorCode.SEAT_NO_OUT_OF_RANGE);
         }
     }
+
 }

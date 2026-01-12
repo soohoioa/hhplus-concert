@@ -15,7 +15,7 @@ public class ReleaseExpiredHoldsUseCaseImpl implements ReleaseExpiredHoldsUseCas
     private final ReleaseExpiredHoldsPort releaseExpiredHoldsPort;
 
     @Override
-    public int releaseExpiredHolds() {
+    public int releaseExpired() {
         return releaseExpiredHoldsPort.releaseExpiredHolds(LocalDateTime.now());
     }
 }
