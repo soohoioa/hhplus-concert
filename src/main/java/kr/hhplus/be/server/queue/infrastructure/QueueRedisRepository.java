@@ -6,7 +6,7 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 @RequiredArgsConstructor
-public class RedisQueueRepository {
+public class QueueRedisRepository {
 
     private final StringRedisTemplate stringRedisTemplate;
 

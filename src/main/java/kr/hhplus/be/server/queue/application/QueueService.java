@@ -2,7 +2,7 @@ package kr.hhplus.be.server.queue.application;
 
 import kr.hhplus.be.server.common.error.AppException;
 import kr.hhplus.be.server.common.error.ErrorCode;
-import kr.hhplus.be.server.queue.infrastructure.RedisQueueRepository;
+import kr.hhplus.be.server.queue.infrastructure.QueueRedisRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class QueueService {
 
-    private final RedisQueueRepository redisQueueRepository;
+    private final QueueRedisRepository queueRedisRepository;
     private final QueueTokenService queueTokenService;
 
     // 대기시간 추정은 일단 단순 상수로 시작(고도화에서 개선)
@@ -20,7 +20,7 @@ public class QueueService {
      * 토큰 발급: (userUuid, queueKey) 기준으로 대기열 등록 + JWT 발급
      */
     public IssueResult issueToken(String userUuid, String queueKey) {
-        long rank = redisQueueRepository.registerIfAbsent(queueKey, userUuid);
+        long rank = queueRedisRepository.registerIfAbsent(queueKey, userUuid);
         if (rank < 0) throw new AppException(ErrorCode.QUEUE_NOT_FOUND);
 
         String token = queueTokenService.issue(userUuid, queueKey, rank);
@@ -33,7 +33,7 @@ public class QueueService {
     public StatusResult getStatus(String token) {
         QueueTokenService.QueueTokenClaims claims = parseOrThrow(token);
 
-        Long rank = redisQueueRepository.getRank(claims.queueKey(), claims.userUuid());
+        Long rank = queueRedisRepository.getRank(claims.queueKey(), claims.userUuid());
         if (rank == null) throw new AppException(ErrorCode.QUEUE_EXPIRED);
 
         return new StatusResult(rank, estimateEtaSeconds(rank), rank == 0);
