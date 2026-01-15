@@ -1,11 +1,10 @@
 package kr.hhplus.be.server.reservation.controller;
 
-import kr.hhplus.be.server.reservation.application.HoldSeatUseCase;
+import kr.hhplus.be.server.reservation.application.service.HoldSeatUseCase;
 import kr.hhplus.be.server.reservation.application.dto.HoldSeatCommand;
 import kr.hhplus.be.server.reservation.application.dto.HoldSeatResult;
-import kr.hhplus.be.server.reservation.dto.SeatHoldRequest;
-import kr.hhplus.be.server.reservation.dto.SeatHoldResponse;
-import kr.hhplus.be.server.reservation.service.SeatHoldService;
+import kr.hhplus.be.server.reservation.controller.dto.SeatHoldRequest;
+import kr.hhplus.be.server.reservation.controller.dto.SeatHoldResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;

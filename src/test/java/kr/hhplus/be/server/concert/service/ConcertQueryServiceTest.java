@@ -2,14 +2,17 @@ package kr.hhplus.be.server.concert.service;
 
 import kr.hhplus.be.server.common.error.AppException;
 import kr.hhplus.be.server.common.error.ErrorCode;
+import kr.hhplus.be.server.concert.application.dto.GetAvailableSeatsQuery;
+import kr.hhplus.be.server.concert.application.dto.GetAvailableSeatsResult;
+import kr.hhplus.be.server.concert.application.dto.GetSchedulesQuery;
+import kr.hhplus.be.server.concert.application.dto.ScheduleItem;
+import kr.hhplus.be.server.concert.application.service.ConcertQueryUseCase;
 import kr.hhplus.be.server.concert.domain.Concert;
 import kr.hhplus.be.server.concert.domain.ConcertSchedule;
-import kr.hhplus.be.server.concert.dto.AvailableSeatsResponse;
-import kr.hhplus.be.server.concert.dto.ScheduleResponse;
-import kr.hhplus.be.server.concert.repository.ConcertRepository;
-import kr.hhplus.be.server.concert.repository.ConcertScheduleRepository;
+import kr.hhplus.be.server.concert.infrastructure.persistence.jpa.ConcertJpaRepository;
+import kr.hhplus.be.server.concert.infrastructure.persistence.jpa.ConcertScheduleJpaRepository;
 import kr.hhplus.be.server.reservation.domain.ScheduleSeat;
-import kr.hhplus.be.server.reservation.repository.ScheduleSeatRepository;
+import kr.hhplus.be.server.reservation.infrastructure.persistence.jpa.ScheduleSeatRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -26,34 +29,41 @@ import static org.junit.jupiter.api.Assertions.*;
 class ConcertQueryServiceTest {
 
     @Autowired
-    ConcertRepository concertRepository;
+    ConcertJpaRepository concertJpaRepository;
+
     @Autowired
-    ConcertScheduleRepository scheduleRepository;
+    ConcertScheduleJpaRepository concertScheduleJpaRepository;
+
     @Autowired
     ScheduleSeatRepository seatRepository;
+
     @Autowired
-    ConcertQueryService concertQueryService;
+    ConcertQueryUseCase concertQueryUseCase;
 
     @Test
     void 예약가능한_날짜_목록을_조회한다() {
         // given
-        Concert concert = concertRepository.save(Concert.create("콘서트A"));
+        Concert concert = concertJpaRepository.save(Concert.create("콘서트A"));
 
-        ConcertSchedule concertSchedule1 = scheduleRepository.save(ConcertSchedule.create(concert, LocalDateTime.now().plusDays(1)));
-        ConcertSchedule concertSchedule2 = scheduleRepository.save(ConcertSchedule.create(concert, LocalDateTime.now().plusDays(2)));
+        concertScheduleJpaRepository.save(ConcertSchedule.create(concert, LocalDateTime.now().plusDays(1)));
+        concertScheduleJpaRepository.save(ConcertSchedule.create(concert, LocalDateTime.now().plusDays(2)));
 
         // when
-        List<ScheduleResponse> result = concertQueryService.getSchedules(concert.getId());
+        List<ScheduleItem> result = concertQueryUseCase.getSchedules(new GetSchedulesQuery(concert.getId()));
 
         // then
         assertThat(result).hasSize(2);
+
+        // 정렬 보장 확인(옵션)
+        assertThat(result.get(0).getStartAt()).isBefore(result.get(1).getStartAt());
     }
 
     @Test
     void 예약가능한_좌석만_조회된다() {
         // given
-        Concert concert = concertRepository.save(Concert.create("콘서트A"));
-        ConcertSchedule schedule = scheduleRepository.save(ConcertSchedule.create(concert, LocalDateTime.now().plusDays(1)));
+        Concert concert = concertJpaRepository.save(Concert.create("콘서트A"));
+        ConcertSchedule schedule =
+                concertScheduleJpaRepository.save(ConcertSchedule.create(concert, LocalDateTime.now().plusDays(1)));
 
         // 좌석 생성
         for (int i = 1; i <= 50; i++) {
@@ -61,11 +71,13 @@ class ConcertQueryServiceTest {
         }
 
         // 일부 좌석 HOLD
-        ScheduleSeat seat1 = seatRepository.findByScheduleIdAndSeatNoForUpdate(schedule.getId(), 1).get();
+        ScheduleSeat seat1 = seatRepository.findByScheduleIdAndSeatNo(schedule.getId(), 1).orElseThrow();
         seat1.hold(100L, LocalDateTime.now().plusMinutes(5));
 
         // when
-        AvailableSeatsResponse result = concertQueryService.getAvailableSeats(concert.getId(), schedule.getId());
+        GetAvailableSeatsResult result = concertQueryUseCase.getAvailableSeats(
+                new GetAvailableSeatsQuery(concert.getId(), schedule.getId())
+        );
 
         // then
         assertThat(result.getAvailableSeatNos()).doesNotContain(1);
@@ -78,7 +90,9 @@ class ConcertQueryServiceTest {
         Long notExistConcertId = 99999L;
 
         // when
-        AppException ex = assertThrows(AppException.class, () -> concertQueryService.getSchedules(notExistConcertId));
+        AppException ex = assertThrows(AppException.class,
+                () -> concertQueryUseCase.getSchedules(new GetSchedulesQuery(notExistConcertId))
+        );
 
         // then
         assertEquals(ErrorCode.CONCERT_NOT_FOUND, ex.getErrorCode());
@@ -92,7 +106,7 @@ class ConcertQueryServiceTest {
 
         // when
         AppException ex = assertThrows(AppException.class,
-                () -> concertQueryService.getAvailableSeats(notExistConcertId, anyScheduleId)
+                () -> concertQueryUseCase.getAvailableSeats(new GetAvailableSeatsQuery(notExistConcertId, anyScheduleId))
         );
 
         // then
@@ -102,34 +116,16 @@ class ConcertQueryServiceTest {
     @Test
     void 예약가능한_좌석_조회시_스케줄이_없으면_에러발생() {
         // given
-        Concert concert = concertRepository.save(Concert.create("콘서트A"));
+        Concert concert = concertJpaRepository.save(Concert.create("콘서트A"));
         Long notExistScheduleId = 99999L;
 
         // when
         AppException ex = assertThrows(AppException.class,
-                () -> concertQueryService.getAvailableSeats(concert.getId(), notExistScheduleId)
+                () -> concertQueryUseCase.getAvailableSeats(new GetAvailableSeatsQuery(concert.getId(), notExistScheduleId))
         );
 
         // then
         assertEquals(ErrorCode.SCHEDULE_NOT_FOUND, ex.getErrorCode());
     }
-
-//    @Test
-//    void 예약가능_좌석조회시_다른_콘서트의_스케줄이면_에러발생() {
-//        // given
-//        Concert concertA = concertRepository.save(Concert.create("콘서트A"));
-//        Concert concertB = concertRepository.save(Concert.create("콘서트B"));
-//
-//        ConcertSchedule scheduleOfB =
-//                scheduleRepository.save(ConcertSchedule.create(concertB, LocalDateTime.now().plusDays(1)));
-//
-//        // when
-//        AppException ex = assertThrows(AppException.class,
-//                () -> concertQueryService.getAvailableSeats(concertA.getId(), scheduleOfB.getId())
-//        );
-//
-//        // then (정책에 맞춰 택1)
-//        assertThat(ex.getErrorCode()).isIn(ErrorCode.SCHEDULE_NOT_FOUND, ErrorCode.INVALID_REQUEST);
-//    }
 
 }

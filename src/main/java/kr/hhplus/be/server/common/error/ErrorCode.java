@@ -26,8 +26,14 @@ public enum ErrorCode {
     INSUFFICIENT_BALANCE(HttpStatus.CONFLICT, "POINT-409", "포인트 잔액이 부족합니다."),
 
     // payment
-    PAYMENT_USER_MISMATCH(HttpStatus.CONFLICT, "PAYMENT-409", "좌석을 선점한 사용자만 결제할 수 있습니다.");
+    PAYMENT_USER_MISMATCH(HttpStatus.CONFLICT, "PAYMENT-409", "좌석을 선점한 사용자만 결제할 수 있습니다."),
 
+    // Queue
+    QUEUE_TOKEN_MISSING(HttpStatus.UNAUTHORIZED, "QUEUE-401", "대기열 토큰이 필요합니다."),
+    QUEUE_TOKEN_INVALID(HttpStatus.UNAUTHORIZED, "QUEUE-402", "대기열 토큰이 유효하지 않습니다."),
+    QUEUE_NOT_FOUND(HttpStatus.NOT_FOUND, "QUEUE-404", "대기열 정보가 존재하지 않습니다."),
+    QUEUE_NOT_READY(HttpStatus.TOO_MANY_REQUESTS, "QUEUE-429", "아직 대기 순서가 아닙니다."),
+    QUEUE_EXPIRED(HttpStatus.UNAUTHORIZED, "QUEUE-410", "대기열 토큰이 만료되었습니다.");
 
     private final HttpStatus status;
     private final String code;

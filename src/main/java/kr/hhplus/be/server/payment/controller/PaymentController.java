@@ -1,11 +1,10 @@
 package kr.hhplus.be.server.payment.controller;
 
-import kr.hhplus.be.server.payment.application.PayUseCase;
+import kr.hhplus.be.server.payment.application.service.PayUseCase;
 import kr.hhplus.be.server.payment.application.dto.PayCommand;
 import kr.hhplus.be.server.payment.application.dto.PayResult;
-import kr.hhplus.be.server.payment.dto.PaymentRequest;
-import kr.hhplus.be.server.payment.dto.PaymentResponse;
-import kr.hhplus.be.server.payment.service.PaymentService;
+import kr.hhplus.be.server.payment.controller.dto.PaymentRequest;
+import kr.hhplus.be.server.payment.controller.dto.PaymentResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
