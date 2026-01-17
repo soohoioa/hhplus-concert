@@ -25,4 +25,10 @@ public class UserPointJpaAdapter implements LoadUserPointPort, SaveUserPointPort
         return userPointJpaRepository.save(userPoint);
     }
 
+    @Override
+    public void flush() {
+        userPointJpaRepository.flush();
+    }
+
+
 }

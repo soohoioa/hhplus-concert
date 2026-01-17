@@ -16,12 +16,24 @@ public class SeatHoldExpireScheduler {
     /**
      * 30초마다 만료된 HOLD 좌석 정리
      */
-    @Scheduled(fixedDelay = 30_000)
+//    @Scheduled(fixedDelay = 30_000)
+//    public void releaseExpiredHolds() {
+//        int released = releaseExpiredHoldsUseCase.releaseExpired();
+//        if (released > 0) {
+//            log.info("Expired seat holds released: {}", released);
+//        }
+//    }
+
+    // 1분마다 만료된 hold 해제 (원하는 주기로 변경)
+    @Scheduled(fixedDelay = 60_000)
     public void releaseExpiredHolds() {
-        int released = releaseExpiredHoldsUseCase.releaseExpiredHolds();
-        if (released > 0) {
-            log.info("Expired seat holds released: {}", released);
-        }
+        int released = releaseExpiredHoldsUseCase.releaseExpired();
+        log.info("[SeatHoldExpiryScheduler] released expired holds count={}", released);
+    }
+
+    @Scheduled(fixedDelay = 10_000) // 10초마다 예시
+    public void run() {
+        releaseExpiredHoldsUseCase.releaseExpired();
     }
 
 }
