@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -41,7 +42,7 @@ public class ConcertQueryUseCaseImpl implements ConcertQueryUseCase {
         return findSchedulesPort
                 .findByConcertIdOrderByStartAtAsc(query.getConcertId()).stream()
                 .map(s -> new ScheduleItem(s.getId(), s.getStartAt()))
-                .toList();
+                .collect(Collectors.toList());
     }
 
     @Override
