@@ -1,9 +1,8 @@
 package kr.hhplus.be.server.common.cache;
 
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
+import com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
@@ -26,16 +25,18 @@ public class CacheConfig {
     @Bean
     public RedisCacheManager cacheManager(RedisConnectionFactory cf) {
 
+        var ptv = BasicPolymorphicTypeValidator.builder()
+                .allowIfSubType("kr.hhplus.be.server") // 우리 DTO
+                .allowIfSubType("java.util")           // List/Map 등 컬렉션
+                .build();
+
         ObjectMapper om = new ObjectMapper();
         om.registerModule(new JavaTimeModule());
         om.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
-        // 타입 정보 포함 (다형성/컬렉션/Wrapper 대응)
-        om.activateDefaultTyping(
-                LaissezFaireSubTypeValidator.instance,
-                ObjectMapper.DefaultTyping.NON_FINAL,
-                JsonTypeInfo.As.PROPERTY
-        );
+        // 핵심: EVERYTHING 금지 → NON_FINAL
+        // (Long 같은 JDK 타입에 타입힌트 안 붙어서 PTV 거절 문제도 사라짐)
+        om.activateDefaultTyping(ptv, ObjectMapper.DefaultTyping.NON_FINAL);
 
         GenericJackson2JsonRedisSerializer valueSerializer =
                 new GenericJackson2JsonRedisSerializer(om);
