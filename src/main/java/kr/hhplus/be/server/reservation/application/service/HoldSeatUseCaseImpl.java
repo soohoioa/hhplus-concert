@@ -7,6 +7,7 @@ import kr.hhplus.be.server.reservation.application.dto.HoldSeatCommand;
 import kr.hhplus.be.server.reservation.application.dto.HoldSeatResult;
 import kr.hhplus.be.server.reservation.port.out.ReservationSeatPort;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +28,7 @@ public class HoldSeatUseCaseImpl implements HoldSeatUseCase {
     private final DistributedLockExecutor lockExecutor;
 
     @Override
+    @CacheEvict(cacheNames = "concert:available-seats", key = "#command.scheduleId")
     public HoldSeatResult hold(HoldSeatCommand command) {
         validateSeatNo(command.getSeatNo());
 
