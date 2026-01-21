@@ -1,9 +1,6 @@
 package kr.hhplus.be.server.concert.controller;
 
-import kr.hhplus.be.server.concert.application.dto.GetAvailableSeatsQuery;
-import kr.hhplus.be.server.concert.application.dto.GetAvailableSeatsResult;
-import kr.hhplus.be.server.concert.application.dto.GetSchedulesQuery;
-import kr.hhplus.be.server.concert.application.dto.ScheduleItem;
+import kr.hhplus.be.server.concert.application.dto.*;
 import kr.hhplus.be.server.concert.application.service.ConcertQueryUseCase;
 import kr.hhplus.be.server.concert.controller.dto.AvailableSeatsResponse;
 import kr.hhplus.be.server.concert.controller.dto.ScheduleResponse;
@@ -26,7 +23,7 @@ public class ConcertQueryController {
     public List<ScheduleResponse> getSchedules(@PathVariable Long concertId) {
         List<ScheduleItem> items = concertQueryUseCase.getSchedules(new GetSchedulesQuery(concertId));
         return items.stream()
-                .map(i -> new ScheduleResponse(i.getScheduleId(), i.getStartAt()))
+                .map(i -> new ScheduleResponse(i.getId(), i.getStartAt()))
                 .toList();
     }
 

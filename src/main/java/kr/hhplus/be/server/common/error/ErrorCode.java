@@ -20,6 +20,7 @@ public enum ErrorCode {
     SEAT_HELD_BY_OTHER(HttpStatus.CONFLICT, "SEAT-410", "다른 사용자가 선점한 좌석입니다."),
     SEAT_NOT_HELD(HttpStatus.CONFLICT, "SEAT-411", "선점되지 않은 좌석입니다."),
     HOLD_EXPIRED(HttpStatus.CONFLICT, "SEAT-412", "좌석 선점 시간이 만료되었습니다."),
+    SEAT_HOLD_CONFLICT(HttpStatus.CONFLICT, "SEAT-413", "좌석 선점 처리 중입니다. 잠시 후 다시 시도해주세요."),
 
     // Point
     USER_POINT_NOT_FOUND(HttpStatus.NOT_FOUND, "POINT-404", "포인트 정보가 존재하지 않습니다."),

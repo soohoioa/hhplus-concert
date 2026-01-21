@@ -2,10 +2,12 @@ package kr.hhplus.be.server.reservation.application.service;
 
 import kr.hhplus.be.server.common.error.AppException;
 import kr.hhplus.be.server.common.error.ErrorCode;
+import kr.hhplus.be.server.common.lock.DistributedLockExecutor;
 import kr.hhplus.be.server.reservation.application.dto.HoldSeatCommand;
 import kr.hhplus.be.server.reservation.application.dto.HoldSeatResult;
 import kr.hhplus.be.server.reservation.port.out.ReservationSeatPort;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,29 +21,42 @@ public class HoldSeatUseCaseImpl implements HoldSeatUseCase {
 
     private static final Duration HOLD_TTL = Duration.ofMinutes(5);
 
+    // 분산락 TTL (임계구역 보호용)
+    private static final Duration LOCK_TTL = Duration.ofSeconds(5);
+
     private final ReservationSeatPort reservationSeatPort;
+    private final DistributedLockExecutor lockExecutor;
 
     @Override
+    @CacheEvict(cacheNames = "concert:available-seats", key = "#command.scheduleId")
     public HoldSeatResult hold(HoldSeatCommand command) {
         validateSeatNo(command.getSeatNo());
 
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime expiresAt = now.plus(HOLD_TTL);
+        String lockKey = buildSeatLockKey(command.getScheduleId(), command.getSeatNo());
 
-        int updated = reservationSeatPort.tryHold(
-                command.getScheduleId(),
-                command.getSeatNo(),
-                command.getUserId(),
-                expiresAt,
-                now
-        );
+        // 락 범위: 검증/홀드/저장(tryHold)까지 한 번에
+        return lockExecutor.executeWithLock(lockKey, LOCK_TTL, () -> {
+            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime expiresAt = now.plus(HOLD_TTL);
 
-        if (updated == 0) {
-            // 실패 사유는 보통 이미 다른 사람이 HELD 거나 이미 RESERVED
-            throw new AppException(ErrorCode.SEAT_HELD_BY_OTHER);
-        }
+            int updated = reservationSeatPort.tryHold(
+                    command.getScheduleId(),
+                    command.getSeatNo(),
+                    command.getUserId(),
+                    expiresAt,
+                    now
+            );
 
-        return new HoldSeatResult(command.getScheduleId(), command.getSeatNo(), expiresAt);
+            if (updated == 0) {
+                throw new AppException(ErrorCode.SEAT_HELD_BY_OTHER);
+            }
+
+            return new HoldSeatResult(command.getScheduleId(), command.getSeatNo(), expiresAt);
+        });
+    }
+
+    private String buildSeatLockKey(Long scheduleId, Integer seatNo) {
+        return "lock:seat:" + scheduleId + ":" + seatNo;
     }
 
     private void validateSeatNo(Integer seatNo) {
