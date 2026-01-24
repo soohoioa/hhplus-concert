@@ -7,8 +7,10 @@ import kr.hhplus.be.server.payment.application.dto.PayResult;
 import kr.hhplus.be.server.payment.domain.Payment;
 import kr.hhplus.be.server.payment.port.out.CreatePaymentPort;
 import kr.hhplus.be.server.point.application.service.SpendPointUseCase;
+import kr.hhplus.be.server.queue.application.SoldoutRankingService;
 import kr.hhplus.be.server.reservation.domain.ScheduleSeat;
 import kr.hhplus.be.server.reservation.domain.SeatStatus;
+import kr.hhplus.be.server.reservation.port.out.CountAvailableSeatsPort;
 import kr.hhplus.be.server.reservation.port.out.LoadSeatForUpdatePort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -23,6 +25,9 @@ public class PayService {
     private final LoadSeatForUpdatePort loadSeatForUpdatePort;
     private final SpendPointUseCase spendPointUseCase;
     private final CreatePaymentPort createPaymentPort;
+
+    private final CountAvailableSeatsPort countAvailableSeatsPort;
+    private final SoldoutRankingService soldoutRankingService;
 
     @Transactional
     public PayResult pay(PayCommand command) {
@@ -49,6 +54,7 @@ public class PayService {
         // 포인트 차감 (이미 동시성 제어 완료)
         spendPointUseCase.spend(command.getUserId(), command.getAmount());
 
+        // 예약 확정 (실판매)
         seat.reserve(command.getUserId(), now);
 
         Payment payment = createPaymentPort.save(
@@ -60,6 +66,12 @@ public class PayService {
                         now
                 )
         );
+
+        // 매진 감지 -> 랭킹 기록 (count query는 보통 flush를 유발해서 reserve 변경분이 반영된 상태로 count됨)
+        long remain = countAvailableSeatsPort.countAvailableSeats(command.getScheduleId());
+        if (remain == 0) {
+            soldoutRankingService.recordSoldout(command.getScheduleId());
+        }
 
         return new PayResult(
                 payment.getId(),
