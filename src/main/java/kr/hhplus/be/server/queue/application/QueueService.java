@@ -64,14 +64,14 @@ public class QueueService {
 
         Long rank = queueRedisRepository.getRank(claims.queueKey(), claims.userUuid());
 
-        // 큐에서 제거됐더라도 permit이 유효하면 통과 상태로 본다
         if (rank == null) {
             if (ready) {
+                // permit 유효: 통과 상태
                 return new StatusResult(0, 0, true);
             }
-            throw new AppException(ErrorCode.QUEUE_EXPIRED);
+            //  permit 만료(or 아직 permit 못받음)인데 큐에 없다면 "만료"로 터뜨리지 말고, 그냥 ready=false 상태로 응답 (폴링 가능)
+            return new StatusResult(-1, -1, false);
         }
-
         return new StatusResult(rank, estimateEtaSeconds(rank), ready);
     }
 
