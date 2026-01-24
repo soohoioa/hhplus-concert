@@ -2,6 +2,7 @@ package kr.hhplus.be.server.reservation.infrastructure.persistence.jpa;
 
 import jakarta.persistence.LockModeType;
 import kr.hhplus.be.server.reservation.domain.ScheduleSeat;
+import kr.hhplus.be.server.reservation.domain.SeatStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
@@ -94,4 +95,6 @@ public interface ScheduleSeatRepository extends JpaRepository<ScheduleSeat, Long
                 LocalDateTime expiresAt, LocalDateTime now);
     // 임시 홀드(HELD) 선점 을 원자적으로 처리하는 핵심 쿼리 (동시성 1명만 성공)
 
+    long countByScheduleIdAndStatus(Long scheduleId, SeatStatus status);
+    // 남은 좌석 수 카운트 메서드
 }
