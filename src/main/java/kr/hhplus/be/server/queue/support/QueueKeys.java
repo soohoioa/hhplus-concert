@@ -33,4 +33,8 @@ public final class QueueKeys {
     public static String globalQueueKey() {
         return "queue:global";
     }
+
+    public static String activeSchedulesKey() {
+        return "queue:schedules:active";
+    }
 }
