@@ -7,14 +7,17 @@ import kr.hhplus.be.server.payment.application.dto.PayCommand;
 import kr.hhplus.be.server.payment.application.service.PayUseCase;
 import kr.hhplus.be.server.payment.infrastructure.persistence.jpa.PaymentJpaRepository;
 import kr.hhplus.be.server.point.domain.UserPoint;
+import kr.hhplus.be.server.queue.support.QueueKeys;
 import kr.hhplus.be.server.reservation.application.dto.HoldSeatCommand;
 import kr.hhplus.be.server.reservation.application.service.HoldSeatUseCase;
 import kr.hhplus.be.server.reservation.domain.ScheduleSeat;
 import kr.hhplus.be.server.reservation.domain.SeatStatus;
 import kr.hhplus.be.server.reservation.infrastructure.persistence.jpa.ScheduleSeatRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -31,7 +34,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
-public class PayDistributedLockIT { // Redis 분산락 통합 테스트 - 결제 PAY + Redis 분산락 검증
+public class PayDistributedLockIT { // Redis 분산락 통합 테스트 - 결제 PAY + Redis 분산락 검증 + 매진 랭킹 기록 검증
     /**
      * 동일 좌석에 대해 결제 로직 진입 자체가 1번
      * Payment row가 1건만 생성
@@ -64,6 +67,16 @@ public class PayDistributedLockIT { // Redis 분산락 통합 테스트 - 결제
 
     @Autowired
     PlatformTransactionManager txManager;
+
+    @Autowired
+    StringRedisTemplate stringRedisTemplate;
+
+    @BeforeEach
+    void flushRedis() {
+        var conn = stringRedisTemplate.getConnectionFactory().getConnection();
+        conn.serverCommands().flushAll();
+        conn.close();
+    }
 
     @Test
     void 동시에_같은좌석_pay하면_분산락으로_1명만_결제된다() throws Exception {
@@ -108,6 +121,13 @@ public class PayDistributedLockIT { // Redis 분산락 통합 테스트 - 결제
         ScheduleSeat seat =
                 seatRepository.findByScheduleIdAndSeatNo(schedule.getId(), 1).orElseThrow();
         assertThat(seat.getStatus()).isEqualTo(SeatStatus.RESERVED);
+
+        // 매진 랭킹 기록 검증
+        Double score = stringRedisTemplate.opsForZSet()
+                .score(QueueKeys.soldoutRankKey(), String.valueOf(schedule.getId()));
+
+        assertThat(score).isNotNull();
+        assertThat(score).isGreaterThanOrEqualTo(0.0);
     }
 
     private ConcertSchedule createScheduleWithSeat1() {
