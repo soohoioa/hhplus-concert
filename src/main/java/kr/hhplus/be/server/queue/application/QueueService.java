@@ -3,6 +3,7 @@ package kr.hhplus.be.server.queue.application;
 import kr.hhplus.be.server.common.error.AppException;
 import kr.hhplus.be.server.common.error.ErrorCode;
 import kr.hhplus.be.server.queue.infrastructure.QueueRedisRepository;
+import kr.hhplus.be.server.queue.support.QueueKeys;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -17,9 +18,14 @@ public class QueueService {
     private static final long AVG_PROCESS_SECONDS = 3;
 
     /**
-     * 토큰 발급: (userUuid, queueKey) 기준으로 대기열 등록 + JWT 발급
+     * scheduleId 기반
      */
-    public IssueResult issueToken(String userUuid, String queueKey) {
+    public IssueResult issueToken(String userUuid, Long scheduleId) {
+        String queueKey = QueueKeys.scheduleQueueKey(scheduleId);
+
+        // 활성 스케줄 등록
+        queueRedisRepository.addActiveSchedule(QueueKeys.activeSchedulesKey(), scheduleId);
+
         long rank = queueRedisRepository.registerIfAbsent(queueKey, userUuid);
         if (rank < 0) throw new AppException(ErrorCode.QUEUE_NOT_FOUND);
 
@@ -28,20 +34,47 @@ public class QueueService {
     }
 
     /**
-     * 폴링 조회: 토큰 -> Redis에서 현재 rank 다시 계산
+     *  queueKey 기반 (테스트/레거시 호환용)
+     * - queueKey가 "queue:schedule:{id}" 형태면 scheduleId를 추출해 active schedule 등록까지 수행
+     * - 그 외의 임의 key는 "테스트용 큐"로 간주하고 active 등록 없이 그대로 동작
      */
+    public IssueResult issueToken(String userUuid, String queueKey) {
+        Long scheduleId = extractScheduleIdFromQueueKey(queueKey);
+        if (scheduleId != null) {
+            queueRedisRepository.addActiveSchedule(QueueKeys.activeSchedulesKey(), scheduleId);
+        }
+
+        long rank = queueRedisRepository.registerIfAbsent(queueKey, userUuid);
+        if (rank < 0) throw new AppException(ErrorCode.QUEUE_NOT_FOUND);
+
+        String token = queueTokenService.issue(userUuid, queueKey, rank);
+        return new IssueResult(token, rank, estimateEtaSeconds(rank));
+    }
+
     public StatusResult getStatus(String token) {
         QueueTokenService.QueueTokenClaims claims = parseOrThrow(token);
 
-        Long rank = queueRedisRepository.getRank(claims.queueKey(), claims.userUuid());
-        if (rank == null) throw new AppException(ErrorCode.QUEUE_EXPIRED);
+        Long scheduleId = extractScheduleIdFromQueueKey(claims.queueKey());
+        if (scheduleId == null) throw new AppException(ErrorCode.QUEUE_TOKEN_INVALID);
 
-        return new StatusResult(rank, estimateEtaSeconds(rank), rank == 0);
+        String permitKey = QueueKeys.schedulePermitKey(scheduleId);
+        String permitTtlKey = QueueKeys.schedulePermitTtlKey(scheduleId, claims.userUuid());
+
+        boolean ready = queueRedisRepository.hasValidPermit(permitKey, permitTtlKey, claims.userUuid());
+
+        Long rank = queueRedisRepository.getRank(claims.queueKey(), claims.userUuid());
+
+        if (rank == null) {
+            if (ready) {
+                // permit 유효: 통과 상태
+                return new StatusResult(0, 0, true);
+            }
+            //  permit 만료(or 아직 permit 못받음)인데 큐에 없다면 "만료"로 터뜨리지 말고, 그냥 ready=false 상태로 응답 (폴링 가능)
+            return new StatusResult(-1, -1, false);
+        }
+        return new StatusResult(rank, estimateEtaSeconds(rank), ready);
     }
 
-    /**
-     * 모든 API 진입 전 검증: "내 차례인가?"
-     */
     public void validateReady(String token) {
         StatusResult status = getStatus(token);
         if (!status.ready()) throw new AppException(ErrorCode.QUEUE_NOT_READY);
@@ -57,6 +90,21 @@ public class QueueService {
 
     private long estimateEtaSeconds(long rank) {
         return rank * AVG_PROCESS_SECONDS;
+    }
+
+    /**
+     * queueKey = "queue:schedule:{scheduleId}" 형태를 가정
+     */
+    private Long extractScheduleIdFromQueueKey(String queueKey) {
+        // "queue:schedule:" prefix 이후 숫자
+        String prefix = "queue:schedule:";
+        if (queueKey == null || !queueKey.startsWith(prefix)) return null;
+        String idStr = queueKey.substring(prefix.length());
+        try {
+            return Long.parseLong(idStr);
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     public record IssueResult(String queueToken, long rank, long etaSeconds) {}

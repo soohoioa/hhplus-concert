@@ -19,8 +19,7 @@ public class QueueController {
     @PostMapping("/token")
     public QueueService.IssueResult issue(@RequestParam String userUuid,
                                           @RequestParam Long scheduleId) {
-        String queueKey = QueueKeys.scheduleQueueKey(scheduleId);
-        return queueService.issueToken(userUuid, queueKey);
+        return queueService.issueToken(userUuid, scheduleId);
     }
 
     /**
