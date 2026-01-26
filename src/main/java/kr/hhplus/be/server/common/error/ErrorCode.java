@@ -28,6 +28,8 @@ public enum ErrorCode {
 
     // payment
     PAYMENT_USER_MISMATCH(HttpStatus.CONFLICT, "PAYMENT-409", "좌석을 선점한 사용자만 결제할 수 있습니다."),
+    PAYMENT_OUTBOX_SERIALIZATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "PAYMENT_OUTBOX_001", "결제 완료 이벤트 Outbox 직렬화에 실패했습니다."
+    ),
 
     // Queue
     QUEUE_TOKEN_MISSING(HttpStatus.UNAUTHORIZED, "QUEUE-401", "대기열 토큰이 필요합니다."),
