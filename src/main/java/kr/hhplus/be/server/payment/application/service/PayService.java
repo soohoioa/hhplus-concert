@@ -4,6 +4,8 @@ import kr.hhplus.be.server.common.error.AppException;
 import kr.hhplus.be.server.common.error.ErrorCode;
 import kr.hhplus.be.server.payment.application.dto.PayCommand;
 import kr.hhplus.be.server.payment.application.dto.PayResult;
+import kr.hhplus.be.server.payment.application.event.PaymentCompletedEvent;
+import kr.hhplus.be.server.payment.application.event.PaymentEventPublisher;
 import kr.hhplus.be.server.payment.domain.Payment;
 import kr.hhplus.be.server.payment.port.out.CreatePaymentPort;
 import kr.hhplus.be.server.point.application.service.SpendPointUseCase;
@@ -28,6 +30,8 @@ public class PayService {
 
     private final CountAvailableSeatsPort countAvailableSeatsPort;
     private final SoldoutRankingService soldoutRankingService;
+
+    private final PaymentEventPublisher paymentEventPublisher;
 
     @Transactional
     public PayResult pay(PayCommand command) {
@@ -72,6 +76,16 @@ public class PayService {
         if (remain == 0) {
             soldoutRankingService.recordSoldout(command.getScheduleId());
         }
+
+        // 트랜잭션 커밋 후에 플랫폼 전송 되도록 이벤트만 발행
+        paymentEventPublisher.publish(new PaymentCompletedEvent(
+                payment.getId(),
+                command.getUserId(),
+                command.getScheduleId(),
+                command.getSeatNo(),
+                command.getAmount(),
+                now
+        ));
 
         return new PayResult(
                 payment.getId(),
