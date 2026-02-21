@@ -36,7 +36,10 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-web")
 	implementation("org.springframework.boot:spring-boot-starter-data-redis")
 	implementation("org.springframework.boot:spring-boot-starter-data-redis-reactive")
+	implementation("org.springframework.kafka:spring-kafka")
 	testImplementation("io.projectreactor:reactor-test")
+	testImplementation("org.springframework.kafka:spring-kafka-test")
+	testImplementation("org.testcontainers:kafka")
 
 	// Lombok
 	compileOnly("org.projectlombok:lombok")
