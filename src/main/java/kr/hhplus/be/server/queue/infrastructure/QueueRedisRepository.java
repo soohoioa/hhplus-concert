@@ -45,28 +45,45 @@ public class QueueRedisRepository {
     }
 
     // ---------------------------
-    // Permit (입장권) 관리
+    // Permit (입장권) 관리 - B 방식 (TTL 키 단일 관리)
     // ---------------------------
 
-    public void grantPermit(String permitKey, String permitTtlKey, String userUuid, Duration ttl) {
-        // permit set 등록
-        stringRedisTemplate.opsForSet().add(permitKey, userUuid);
-
-        // TTL 키 (만료되면 permit도 정리 대상)
+    /**
+     * permit TTL 키 하나만 존재하면 permit 유효로 본다.
+     */
+    public void grantPermit(String permitTtlKey, Duration ttl) {
         stringRedisTemplate.opsForValue().set(permitTtlKey, "1", ttl);
     }
 
-    public boolean hasValidPermit(String permitKey, String permitTtlKey, String userUuid) {
-        Boolean inSet = stringRedisTemplate.opsForSet().isMember(permitKey, userUuid);
-        if (inSet == null || !inSet) return false;
-
+    /**
+     * TTL 키 존재 여부로 permit 유효성 판단
+     */
+    public boolean hasValidPermit(String permitTtlKey) {
         Boolean ttlExists = stringRedisTemplate.hasKey(permitTtlKey);
         return ttlExists != null && ttlExists;
     }
 
-    public void revokePermit(String permitKey, String permitTtlKey, String userUuid) {
-        stringRedisTemplate.opsForSet().remove(permitKey, userUuid);
+    public void revokePermit(String permitTtlKey) {
         stringRedisTemplate.delete(permitTtlKey);
+    }
+
+    /**
+     * (레거시 호환) 기존 시그니처를 유지하되 내부적으로 TTL 키 방식만 사용
+     * - permitKey / userUuid는 더 이상 사용하지 않음
+     */
+    @Deprecated
+    public void grantPermit(String permitKey, String permitTtlKey, String userUuid, Duration ttl) {
+        grantPermit(permitTtlKey, ttl);
+    }
+
+    @Deprecated
+    public boolean hasValidPermit(String permitKey, String permitTtlKey, String userUuid) {
+        return hasValidPermit(permitTtlKey);
+    }
+
+    @Deprecated
+    public void revokePermit(String permitKey, String permitTtlKey, String userUuid) {
+        revokePermit(permitTtlKey);
     }
 
     public void addActiveSchedule(String activeKey, Long scheduleId) {
