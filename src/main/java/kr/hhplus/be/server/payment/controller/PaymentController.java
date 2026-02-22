@@ -5,11 +5,9 @@ import kr.hhplus.be.server.payment.application.dto.PayCommand;
 import kr.hhplus.be.server.payment.application.dto.PayResult;
 import kr.hhplus.be.server.payment.controller.dto.PaymentRequest;
 import kr.hhplus.be.server.payment.controller.dto.PaymentResponse;
+import kr.hhplus.be.server.queue.application.QueueService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
@@ -17,12 +15,22 @@ import org.springframework.web.bind.annotation.RestController;
 public class PaymentController {
 
     private final PayUseCase payUseCase;
+    private final QueueService queueService; // 추가
 
     @PostMapping
-    public PaymentResponse pay(@RequestBody PaymentRequest paymentRequest) {
+    public PaymentResponse pay(
+            @RequestHeader("X-QUEUE-TOKEN") String queueToken, // 추가
+            @RequestBody PaymentRequest paymentRequest
+    ) {
+        queueService.validateReady(queueToken); // Gate
+
         PayResult result = payUseCase.pay(
-                new PayCommand(paymentRequest.getUserId(), paymentRequest.getScheduleId(),
-                        paymentRequest.getSeatNo(), paymentRequest.getAmount())
+                new PayCommand(
+                        paymentRequest.getUserId(),
+                        paymentRequest.getScheduleId(),
+                        paymentRequest.getSeatNo(),
+                        paymentRequest.getAmount()
+                )
         );
 
         return new PaymentResponse(
@@ -34,5 +42,4 @@ public class PaymentController {
                 result.getPaidAt()
         );
     }
-
 }

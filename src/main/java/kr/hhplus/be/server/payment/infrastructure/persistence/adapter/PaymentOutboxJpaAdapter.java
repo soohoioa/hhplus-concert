@@ -10,6 +10,7 @@ import kr.hhplus.be.server.payment.infrastructure.persistence.jpa.PaymentOutboxJ
 import kr.hhplus.be.server.payment.port.out.SavePaymentOutboxPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 @Component
 @RequiredArgsConstructor
@@ -19,6 +20,7 @@ public class PaymentOutboxJpaAdapter implements SavePaymentOutboxPort {
     private final ObjectMapper objectMapper;
 
     @Override
+    @Transactional
     public void save(PaymentCompletedEvent event) {
         repository.save(PaymentOutbox.pending(
                 event.getClass().getSimpleName(),
