@@ -5,6 +5,7 @@ import kr.hhplus.be.server.common.error.ErrorCode;
 import kr.hhplus.be.server.common.lock.DistributedLockExecutor;
 import kr.hhplus.be.server.reservation.application.dto.HoldSeatCommand;
 import kr.hhplus.be.server.reservation.application.dto.HoldSeatResult;
+import kr.hhplus.be.server.reservation.infrastructure.persistence.outbox.ReservationOutboxAppender;
 import kr.hhplus.be.server.reservation.port.out.ReservationSeatPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
@@ -26,6 +27,7 @@ public class HoldSeatUseCaseImpl implements HoldSeatUseCase {
 
     private final ReservationSeatPort reservationSeatPort;
     private final DistributedLockExecutor lockExecutor;
+    private final ReservationOutboxAppender outboxAppender;
 
     @Override
     @CacheEvict(cacheNames = "concert:available-seats", key = "#command.scheduleId")
@@ -50,6 +52,9 @@ public class HoldSeatUseCaseImpl implements HoldSeatUseCase {
             if (updated == 0) {
                 throw new AppException(ErrorCode.SEAT_HELD_BY_OTHER);
             }
+
+            // 트랜잭션 안에서 Outbox 저장
+            outboxAppender.appendHoldCreated(command, expiresAt, now);
 
             return new HoldSeatResult(command.getScheduleId(), command.getSeatNo(), expiresAt);
         });
