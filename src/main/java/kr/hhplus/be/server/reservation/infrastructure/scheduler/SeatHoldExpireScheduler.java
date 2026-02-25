@@ -31,9 +31,9 @@ public class SeatHoldExpireScheduler {
         log.info("[SeatHoldExpiryScheduler] released expired holds count={}", released);
     }
 
-    @Scheduled(fixedDelay = 10_000) // 10초마다 예시
-    public void run() {
-        releaseExpiredHoldsUseCase.releaseExpired();
-    }
+//    @Scheduled(fixedDelay = 10_000) // 10초마다 예시
+//    public void run() {
+//        releaseExpiredHoldsUseCase.releaseExpired();
+//    }
 
 }

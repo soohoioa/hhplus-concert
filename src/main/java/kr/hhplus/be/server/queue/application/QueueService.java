@@ -57,22 +57,23 @@ public class QueueService {
         Long scheduleId = extractScheduleIdFromQueueKey(claims.queueKey());
         if (scheduleId == null) throw new AppException(ErrorCode.QUEUE_TOKEN_INVALID);
 
-        String permitKey = QueueKeys.schedulePermitKey(scheduleId);
         String permitTtlKey = QueueKeys.schedulePermitTtlKey(scheduleId, claims.userUuid());
+        boolean ready = queueRedisRepository.hasValidPermit(permitTtlKey);
 
-        boolean ready = queueRedisRepository.hasValidPermit(permitKey, permitTtlKey, claims.userUuid());
-
-        Long rank = queueRedisRepository.getRank(claims.queueKey(), claims.userUuid());
-
-        if (rank == null) {
-            if (ready) {
-                // permit 유효: 통과 상태
-                return new StatusResult(0, 0, true);
-            }
-            //  permit 만료(or 아직 permit 못받음)인데 큐에 없다면 "만료"로 터뜨리지 말고, 그냥 ready=false 상태로 응답 (폴링 가능)
-            return new StatusResult(-1, -1, false);
+        // permit 유효하면 즉시 통과
+        if (ready) {
+            return new StatusResult(0, 0, true);
         }
-        return new StatusResult(rank, estimateEtaSeconds(rank), ready);
+
+        // permit이 없으면 큐에 남아있는지 live rank 확인
+        Long liveRank = queueRedisRepository.getRank(claims.queueKey(), claims.userUuid());
+        if (liveRank != null) {
+            return new StatusResult(liveRank, estimateEtaSeconds(liveRank), false);
+        }
+
+        // 큐에서는 빠졌는데 permit이 아직 없거나(타이밍), permit 만료된 경우 → snapRank로 UX 안정화
+        long snapRank = Math.max(0L, claims.snapRank());
+        return new StatusResult(snapRank, estimateEtaSeconds(snapRank), false);
     }
 
     public void validateReady(String token) {

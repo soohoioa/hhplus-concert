@@ -1,0 +1,23 @@
+
+### 1) 큐 토큰 발급
+POST http://localhost:8080/api/v1/queue/token?userUuid=user-1&scheduleId=2
+
+> {%
+    client.global.set("QUEUE_TOKEN", response.body.queueToken);
+    client.log("QUEUE_TOKEN = " + client.global.get("QUEUE_TOKEN"));
+%}
+
+### 2) 상태 확인 (ready=true 될 때까지 몇 번 실행)
+GET http://localhost:8080/api/v1/queue/status
+X-QUEUE-TOKEN: {{QUEUE_TOKEN}}
+
+### 3) Hold seat
+POST http://localhost:8080/api/v1/reservations/hold
+Content-Type: application/json
+X-QUEUE-TOKEN: {{QUEUE_TOKEN}}
+
+{
+  "userId": 1,
+  "scheduleId": 2,
+  "seatNo": 30
+}

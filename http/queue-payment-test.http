@@ -1,0 +1,36 @@
+### 0) (선택) 기존 Redis 키 초기화가 필요하면 직접 redis-cli로 지우거나 생략
+
+### 1) 큐 토큰 발급
+POST http://localhost:8080/api/v1/queue/token?userUuid=user-1&scheduleId=2
+
+> {%
+    client.global.set("QUEUE_TOKEN", response.body.queueToken);
+    client.log("QUEUE_TOKEN = " + client.global.get("QUEUE_TOKEN"));
+%}
+
+### 2) 상태 확인 (ready=true 될 때까지 몇 번 실행)
+GET http://localhost:8080/api/v1/queue/status
+X-QUEUE-TOKEN: {{QUEUE_TOKEN}}
+
+### 3) 좌석 HOLD (토큰 헤더 포함)
+POST http://localhost:8080/api/v1/reservations/hold
+Content-Type: application/json
+X-QUEUE-TOKEN: {{QUEUE_TOKEN}}
+
+{
+  "userId": 1,
+  "scheduleId": 2,
+  "seatNo": 29
+}
+
+### 4) 결제 (토큰 헤더 포함)
+POST http://localhost:8080/api/v1/payments
+Content-Type: application/json
+X-QUEUE-TOKEN: {{QUEUE_TOKEN}}
+
+{
+  "userId": 1,
+  "scheduleId": 2,
+  "seatNo": 29,
+  "amount": 1000
+}

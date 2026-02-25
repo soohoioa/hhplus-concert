@@ -27,8 +27,9 @@ public class QueueTokenService {
 
     public String issue(String userUuid, String queueKey, long snapRank) {
         Instant now = Instant.now();
+
         return Jwts.builder()
-                .subject(userUuid)
+                .subject(userUuid)        // 0.12.x 스타일
                 .claim("qk", queueKey)
                 .claim("snap_rank", snapRank)
                 .issuedAt(Date.from(now))
@@ -38,6 +39,7 @@ public class QueueTokenService {
     }
 
     public QueueTokenClaims parse(String token) {
+
         Claims claims = Jwts.parser()
                 .verifyWith(secretKey)
                 .build()
@@ -47,9 +49,19 @@ public class QueueTokenService {
         String userUuid = claims.getSubject();
         String queueKey = claims.get("qk", String.class);
 
-        return new QueueTokenClaims(userUuid, queueKey);
+        Object raw = claims.get("snap_rank");
+        long snapRank = 0L;
+
+        if (raw instanceof Number n) {
+            snapRank = n.longValue();
+        } else if (raw instanceof String s) {
+            try {
+                snapRank = Long.parseLong(s);
+            } catch (NumberFormatException ignored) {}
+        }
+
+        return new QueueTokenClaims(userUuid, queueKey, snapRank);
     }
 
-    public record QueueTokenClaims(String userUuid, String queueKey) {}
-
+    public record QueueTokenClaims(String userUuid, String queueKey, long snapRank) {}
 }
