@@ -1,0 +1,147 @@
+{
+    "metrics": {
+        "data_sent": {
+            "count": 2863462,
+            "rate": 44037.73654257118
+        },
+        "data_received": {
+            "count": 1623902,
+            "rate": 24974.303289847896
+        },
+        "http_reqs": {
+            "count": 9175,
+            "rate": 141.10410153097567
+        },
+        "http_req_duration": {
+            "p(95)": 6.935899999999998,
+            "avg": 3.3196228882833743,
+            "min": 0.517,
+            "med": 2.895,
+            "max": 49.612,
+            "p(90)": 5.443,
+            "thresholds": {
+                "p(95)<800": false
+            }
+        },
+        "vus_max": {
+            "max": 50,
+            "value": 50,
+            "min": 50
+        },
+        "vus": {
+            "value": 1,
+            "min": 0,
+            "max": 50
+        },
+        "http_req_waiting": {
+            "max": 49.574,
+            "p(90)": 5.355,
+            "p(95)": 6.823499999999998,
+            "avg": 3.2249223978201695,
+            "min": 0.481,
+            "med": 2.791
+        },
+        "checks": {
+            "passes": 9175,
+            "fails": 0,
+            "value": 1
+        },
+        "http_req_blocked": {
+            "p(90)": 0.016,
+            "p(95)": 0.019,
+            "avg": 0.015220163487738398,
+            "min": 0.001,
+            "med": 0.007,
+            "max": 2.68
+        },
+        "http_req_connecting": {
+            "avg": 0.004751389645776568,
+            "min": 0,
+            "med": 0,
+            "max": 0.627,
+            "p(90)": 0,
+            "p(95)": 0
+        },
+        "http_req_sending": {
+            "p(95)": 0.057,
+            "avg": 0.02798692098092584,
+            "min": 0.003,
+            "med": 0.021,
+            "max": 1.086,
+            "p(90)": 0.045
+        },
+        "http_req_failed": {
+            "passes": 289,
+            "fails": 8886,
+            "thresholds": {
+                "rate<0.01": true
+            },
+            "value": 0.03149863760217984
+        },
+        "http_req_duration{expected_response:true}": {
+            "avg": 3.188906594643252,
+            "min": 0.517,
+            "med": 2.8175,
+            "max": 49.612,
+            "p(90)": 5.157,
+            "p(95)": 6.052249999999999
+        },
+        "iteration_duration": {
+            "med": 5602.045583499999,
+            "max": 10324.544875,
+            "p(90)": 9523.279266599999,
+            "p(95)": 9923.11152705,
+            "avg": 5501.433975689103,
+            "min": 316.661542
+        },
+        "http_req_receiving": {
+            "max": 9.902,
+            "p(90)": 0.104,
+            "p(95)": 0.1462999999999996,
+            "avg": 0.06671356948228811,
+            "min": 0.008,
+            "med": 0.043
+        },
+        "iterations": {
+            "count": 312,
+            "rate": 4.79830841173454
+        },
+        "http_req_tls_handshaking": {
+            "avg": 0,
+            "min": 0,
+            "med": 0,
+            "max": 0,
+            "p(90)": 0,
+            "p(95)": 0
+        }
+    },
+    "root_group": {
+        "name": "",
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {},
+        "checks": {
+                "issue token 200": {
+                    "name": "issue token 200",
+                    "path": "::issue token 200",
+                    "id": "1b0eb66366ed945db23fa210692f4d19",
+                    "passes": 312,
+                    "fails": 0
+                },
+                "status 200": {
+                    "passes": 8551,
+                    "fails": 0,
+                    "name": "status 200",
+                    "path": "::status 200",
+                    "id": "fad9fa412b86fcb03bee97c80dcd61f1"
+                },
+                "hold responded": {
+                    "id": "2934c8b5b9fc05a00b42ff9c609230f0",
+                    "passes": 312,
+                    "fails": 0,
+                    "name": "hold responded",
+                    "path": "::hold responded"
+                }
+            }
+    }
+}

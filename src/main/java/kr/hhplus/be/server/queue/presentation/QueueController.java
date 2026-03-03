@@ -1,7 +1,6 @@
 package kr.hhplus.be.server.queue.presentation;
 
 import kr.hhplus.be.server.queue.application.QueueService;
-import kr.hhplus.be.server.queue.support.QueueKeys;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 

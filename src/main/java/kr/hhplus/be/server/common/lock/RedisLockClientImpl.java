@@ -1,7 +1,6 @@
 package kr.hhplus.be.server.common.lock;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.redis.connection.ReturnType;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Component;

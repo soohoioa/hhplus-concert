@@ -1,6 +1,5 @@
 package kr.hhplus.be.server.point.application.service;
 
-
 import kr.hhplus.be.server.common.error.AppException;
 import kr.hhplus.be.server.common.error.ErrorCode;
 import kr.hhplus.be.server.point.application.dto.ChargePointCommand;

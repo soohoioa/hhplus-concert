@@ -1,7 +1,5 @@
 package kr.hhplus.be.server.reservation.infrastructure.persistence.adapter;
 
-import kr.hhplus.be.server.reservation.port.out.LoadSeatForUpdatePort;
-import kr.hhplus.be.server.reservation.domain.ScheduleSeat;
 import kr.hhplus.be.server.reservation.infrastructure.persistence.jpa.ScheduleSeatRepository;
 import kr.hhplus.be.server.reservation.port.out.ReleaseExpiredHoldsPort;
 import kr.hhplus.be.server.reservation.port.out.ReservationSeatPort;

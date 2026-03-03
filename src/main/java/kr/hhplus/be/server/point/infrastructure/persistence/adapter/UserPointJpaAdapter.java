@@ -30,5 +30,4 @@ public class UserPointJpaAdapter implements LoadUserPointPort, SaveUserPointPort
         userPointJpaRepository.flush();
     }
 
-
 }

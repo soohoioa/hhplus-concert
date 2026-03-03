@@ -39,3 +39,4 @@ out/
 data
 src/main/resources/application.yml
 docs2
+.DS_Store
