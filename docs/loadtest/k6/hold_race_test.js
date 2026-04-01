@@ -199,10 +199,6 @@ export default function () {
 }
 
 /*
-이건 정합성 검증용이야.
-
-특징:
-
 50명이 거의 동시에 1번씩만 요청
 전부 같은 좌석 요청
 좌석 중복 선점 방지 로직 검증
@@ -211,11 +207,9 @@ export default function () {
 나머지: 409
 예상 못한 500 같은 에러 없음
 
-실행예시
 BASE_URL=http://localhost:8080 \
 SCHEDULE_ID=1 \
 READY_TIMEOUT_SEC=10 \
 TARGET_SEAT_NO=1 \
 k6 run hold_race_test.js
-
  */

@@ -198,22 +198,15 @@ export default function () {
 }
 
 /*
-
-이건 성능 측정용이야.
-
-특징:
-
 50 VU 고정
 10분 유지
 seat를 분산해서 일반적인 부하 상황 재현
 hold_req_ms로 hold API만 따로 측정
 hold_req_ms p(95)<120을 직접 검증
 
-실행예시
 BASE_URL=http://localhost:8080 \
 SCHEDULE_ID=1 \
 READY_TIMEOUT_SEC=10 \
 SEAT_COUNT=50 \
 k6 run hold_perf_test.js
-
  */
