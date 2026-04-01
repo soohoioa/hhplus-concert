@@ -1,0 +1,108 @@
+{
+  "test_name": "hold_same_seat_race_test",
+  "purpose": "동일 좌석 경합 상황에서 중복 선점 방지 검증",
+  "script": "docs/loadtest/k6/hold_race_test.js",
+  "command": "BASE_URL=http://localhost:8080 SCHEDULE_ID=1 READY_TIMEOUT_SEC=10 TARGET_SEAT_NO=1 k6 run docs/loadtest/k6/hold_race_test.js",
+  "scenario": {
+    "name": "same_seat_race_50vu",
+    "executor": "per-vu-iterations",
+    "vus": 50,
+    "iterations_per_vu": 1,
+    "max_duration": "1m",
+    "graceful_stop": "30s"
+  },
+  "environment": {
+    "BASE_URL": "http://localhost:8080",
+    "SCHEDULE_ID": 1,
+    "READY_TIMEOUT_SEC": 10,
+    "TARGET_SEAT_NO": 1
+  },
+  "thresholds": {
+    "hold_success_count": "count>=1",
+    "ready_timeout_count": "count<1",
+    "unexpected_error_rate": "rate<0.01"
+  },
+  "results": {
+    "threshold_passed": true,
+    "checks": {
+      "total": 450,
+      "succeeded": 450,
+      "failed": 0,
+      "success_rate_percent": 100.0
+    },
+    "custom_metrics": {
+      "expected_error_count": 49,
+      "hold_conflict_count": 49,
+      "hold_success_count": 1,
+      "hold_req_ms": {
+        "avg": 24.95818,
+        "min": 6.487,
+        "med": 22.35,
+        "max": 75.314,
+        "p90": 40.2559,
+        "p95": 40.8863
+      },
+      "queue_status_ms": {
+        "avg": 4.870073,
+        "min": 1.374,
+        "med": 4.796,
+        "max": 9.371,
+        "p90": 7.7417,
+        "p95": 8.1046
+      },
+      "queue_wait_ms": {
+        "avg": 533.8,
+        "min": 110,
+        "med": 534,
+        "max": 954,
+        "p90": 954,
+        "p95": 954
+      },
+      "ready_timeout_count": 0,
+      "token_req_ms": {
+        "avg": 12.91914,
+        "min": 10.505,
+        "med": 12.5385,
+        "max": 15.05,
+        "p90": 14.5977,
+        "p95": 14.7795
+      },
+      "unexpected_error_rate_percent": 0.0
+    },
+    "http_metrics": {
+      "http_req_duration_ms": {
+        "avg": 8.38,
+        "min": 1.37,
+        "med": 5.58,
+        "max": 75.31,
+        "p90": 14.8,
+        "p95": 24.24
+      },
+      "http_req_failed_percent": 12.25,
+      "http_reqs": 400
+    },
+    "execution": {
+      "iteration_duration_ms": {
+        "avg": 575.35,
+        "min": 142.1,
+        "med": 569.57,
+        "max": 1010,
+        "p90": 990.6,
+        "p95": 999
+      },
+      "iterations": 50,
+      "vus_max": 50
+    },
+    "network": {
+      "data_received_kb": 84,
+      "data_sent_kb": 132
+    }
+  },
+  "summary": {
+    "key_findings": [
+      "동일 좌석 요청 50건 중 1건만 성공했다.",
+      "나머지 49건은 충돌(409)로 처리되었다.",
+      "예기치 않은 오류율은 0.00%였다."
+    ]
+  }
+}

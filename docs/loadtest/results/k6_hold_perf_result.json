@@ -1,0 +1,111 @@
+{
+  "test_name": "hold_performance_test",
+  "purpose": "hold API p95 성능 측정",
+  "script": "docs/loadtest/k6/hold_perf_test.js",
+  "command": "BASE_URL=http://localhost:8080 SCHEDULE_ID=1 READY_TIMEOUT_SEC=10 SEAT_COUNT=50 k6 run docs/loadtest/k6/hold_perf_test.js",
+  "scenario": {
+    "name": "baseline_50vu_10m",
+    "executor": "constant-vus",
+    "vus": 50,
+    "duration": "10m",
+    "graceful_stop": "10s"
+  },
+  "environment": {
+    "BASE_URL": "http://localhost:8080",
+    "SCHEDULE_ID": 1,
+    "READY_TIMEOUT_SEC": 10,
+    "SEAT_COUNT": 50
+  },
+  "thresholds": {
+    "hold_req_ms": "p(95)<120",
+    "ready_timeout_count": "count<1",
+    "unexpected_error_rate": "rate<0.01"
+  },
+  "warnings": [
+    {
+      "type": "high_cardinality",
+      "message": "The test generated more than 100000 unique time series, likely due to unique IDs in requests/URLs."
+    }
+  ],
+  "results": {
+    "threshold_passed": true,
+    "checks": {
+      "total": 242009,
+      "succeeded": 242009,
+      "failed": 0,
+      "success_rate_percent": 100.0
+    },
+    "custom_metrics": {
+      "expected_error_count": 27449,
+      "hold_req_ms": {
+        "avg": 12.664157,
+        "min": 2.864,
+        "med": 6.999,
+        "max": 248.321,
+        "p90": 38.4472,
+        "p95": 42.679
+      },
+      "queue_status_ms": {
+        "avg": 2.269382,
+        "min": 0.473,
+        "med": 1.724,
+        "max": 109.996,
+        "p90": 3.652,
+        "p95": 4.90995
+      },
+      "queue_wait_ms": {
+        "avg": 973.138916,
+        "min": 29,
+        "med": 1013,
+        "max": 1360,
+        "p90": 1023,
+        "p95": 1029
+      },
+      "ready_timeout_count": 0,
+      "token_req_ms": {
+        "avg": 3.416109,
+        "min": 0.919,
+        "med": 2.277,
+        "max": 274.701,
+        "p90": 4.4486,
+        "p95": 5.9822
+      },
+      "unexpected_error_rate_percent": 0.0
+    },
+    "http_metrics": {
+      "http_req_duration_ms": {
+        "avg": 3.75,
+        "min": 0.473,
+        "med": 1.96,
+        "max": 274.7,
+        "p90": 6.4,
+        "p95": 9.38
+      },
+      "http_req_failed_percent": 12.79,
+      "http_reqs": 214460
+    },
+    "execution": {
+      "iteration_duration_ms": {
+        "avg": 1090,
+        "min": 535.83,
+        "med": 1120,
+        "max": 1640,
+        "p90": 1150,
+        "p95": 1160
+      },
+      "iterations": 27549,
+      "vus_max": 50
+    },
+    "network": {
+      "data_received_mb": 45,
+      "data_sent_mb": 70
+    }
+  },
+  "summary": {
+    "key_findings": [
+      "hold API p95는 42.679ms로 threshold(p95<120)를 충족했다.",
+      "예기치 않은 오류율은 0.00%였다.",
+      "ready timeout은 0건이었다."
+    ]
+  }
+}
